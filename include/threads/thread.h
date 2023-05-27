@@ -88,9 +88,10 @@ typedef int tid_t;
 struct thread {
 	/* Owned by thread.c. */
 	tid_t tid;                          /* Thread identifier. */
-	enum thread_status status;          /* Thread state. */
+	enum thread_status status;          /* Thread state. */ // 스레드의 상태,
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
+	int64_t wakeup_tick;                    // 각자 가지고 있을 일어날 시간
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
@@ -120,6 +121,11 @@ void thread_start (void);
 void thread_tick (void);
 void thread_print_stats (void);
 
+void thread_sleep(int64_t); // 재우는 함수
+void thread_wakeup(int64_t); // 깨우는 함수
+bool thread_compare_time(const struct list_elem *a, const struct list_elem *b, void *aux);
+//void timer_interrupt(struct intr_frame *tf);
+
 typedef void thread_func (void *aux);
 tid_t thread_create (const char *name, int priority, thread_func *, void *);
 
@@ -129,6 +135,7 @@ void thread_unblock (struct thread *);
 struct thread *thread_current (void);
 tid_t thread_tid (void);
 const char *thread_name (void);
+
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);

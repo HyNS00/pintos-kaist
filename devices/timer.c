@@ -82,19 +82,23 @@ timer_ticks (void) {
 
 /* Returns the number of timer ticks elapsed since THEN, which
    should be a value once returned by timer_ticks(). */
+// then 이후 경과한 타이머 틱 수를 반환한다. then은 이전에 timer_ticks()함수로 얻은 값이어야한다.
+// timer_elapsed는 경과 시간을 측정한다.
 int64_t
 timer_elapsed (int64_t then) {
 	return timer_ticks () - then;
 }
-
 /* Suspends execution for approximately TICKS timer ticks. */
-void
+void // ticks - 핀토스 내부에서 시간을 나타내기 위한 값으로 부팅 이후에 일정한 시간마다 1씩 증가
 timer_sleep (int64_t ticks) {
-	int64_t start = timer_ticks ();
+	int64_t start = timer_ticks (); // 현재의 timer_ticks를 start에 저장
 
 	ASSERT (intr_get_level () == INTR_ON);
-	while (timer_elapsed (start) < ticks)
-		thread_yield ();
+	// while (timer_elapsed (start) < ticks) 
+	// 	thread_yield ();
+	if (timer_elapsed (start) < ticks){
+		thread_sleep(start+ticks);
+	}
 }
 
 /* Suspends execution for approximately MS milliseconds. */
@@ -120,12 +124,13 @@ void
 timer_print_stats (void) {
 	printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
-
+
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED) {
 	ticks++;
-	thread_tick ();
+	
+	thread_wakeup(ticks);
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
