@@ -163,17 +163,20 @@ thread_init (void) {
 // 재우는 함수
 void 
 thread_sleep (int64_t ticks){
-	struct thread *curr = thread_current();
-	ASSERT(curr != idle_thread);
-
 	enum intr_level old_level;
-
 	old_level = intr_disable();
-	curr->wakeup_tick = ticks;
-	list_insert_ordered(&sleep_list,&curr->elem, thread_compare_time,0);
-	thread_block();
+	/*
+	현재 스레드가 idle 스레드가 아니라면 
+	스레드를 sleep_list 에 스레드를 넣고
+	재운다.
+	*/ 
+	ASSERT (!intr_context ());
+	if (thread_current() != idle_thread){
+		thread_current()->wakeup_tick = ticks;
+		list_insert_ordered(&sleep_list, &thread_current()->elem,thread_compare_time,0);
+		thread_block();
+	}
 	intr_set_level(old_level);
-
 }
 /* 타이머 인터럽트에서 글로벌 틱수를 받아와서 
 슬립 리스트의 가장 짧게 잠드는 스레드와 글로벌 틱스를 비교해
@@ -311,7 +314,7 @@ thread_create (const char *name, int priority,
 
 	/* Add to run queue. */
 	thread_unblock (t);
-
+	test_max_priority();
 	return tid;
 } // 스레드를 생성하는 함수 'thread_create'의 구현이다. 함수는 새로운 스레드를 생성하고 초기화한 후, 스레드를 실행 대기열에 추가하여 스케줄링
 // 매개변수로는 이름,우선순위, 실행할 함수, 보조인자 aux
@@ -359,7 +362,9 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable (); // 인터럽트를 비활성화하고 이전 인터럽트 레벨을 저장
 	ASSERT (t->status == THREAD_BLOCKED); // t의 상태가 blocked인지 확인한다.
-	list_push_back (&ready_list, &t->elem); // 준비 리스트의 뒤에 t를 추가한다.
+	// list_push_back (&ready_list, &t->elem); // 준비 리스트의 뒤에 t를 추가한다.
+	list_insert_ordered(&ready_list, &t->elem, thread_compare_priority ,0);
+	sort_ready_list();
 	t->status = THREAD_READY; // t의 상태를 READY로 변경한다
 	intr_set_level (old_level); // 이전 인터럽트 레벨로 복원한다.
 }
@@ -446,20 +451,41 @@ thread_yield (void) {
 
 	old_level = intr_disable ();
 	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+		// list_push_back (&ready_list, &curr->elem);
+		list_insert_ordered(&ready_list, &curr->elem, thread_compare_priority ,0);
+	sort_ready_list();
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
+void sort_ready_list() {
+	list_sort(&ready_list, thread_compare_priority,NULL);
+}
+bool thread_compare_priority(const struct list_elem *a,
+							 const struct list_elem *b,
+							 void *aux)
+{
+	return list_entry(a, struct thread, elem)->priority > list_entry(b, struct thread, elem)->priority;
+}
 
+void
+test_max_priority (void) {
+	if(!list_empty(&ready_list) && thread_current() -> priority <
+	list_entry(list_front(&ready_list),struct thread,elem)->priority){
+		thread_yield ();
+	}
+}
 /* Sets the current thread's priority to NEW_PRIORITY. */
 /* 현재 스레드의 우선순위를 new_priority로 설정한다.*/
+// 현재 스레드가 더 이상 높은 우선 순위를 가지지 않으면 양보한다.
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
+	test_max_priority();
 }
 
 /* Returns the current thread's priority. */
 /* 현재 스레드의 우선순위를 돌려준다.*/
+// 우선 순위 기부가 있는 경우에는 더 높은 우선순위를 반환
 int
 thread_get_priority (void) {
 	return thread_current ()->priority;

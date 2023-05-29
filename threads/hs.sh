@@ -2,5 +2,6 @@
 make clean
 make
 cd build
-make tests/threads/alarm-multiple.result
+make tests/threads/alarm-simultaneous.result
+# make test/
 cd ..
