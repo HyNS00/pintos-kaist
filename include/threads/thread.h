@@ -92,6 +92,11 @@ struct thread {
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
 	int64_t wakeup_tick;                    // 각자 가지고 있을 일어날 시간
+	// donation 선언
+	struct list donations; // priority가 변경되었다면 A thread의 list donations에 b스레드를 기억한다
+	struct list_elem donation_element; // list donation에 넣어줄 리스트 성분
+	struct lock *wait_on_lock; // 해당 스레드가 대기하고 있는 lock자료구조 주소 저장:thread가 원하는 lock을 이미 다른 thread가 점유하고 있으면 lock의 주소를 저장
+	int init_priority; // priority를 양도받았다가 다시 반납할 때 원래 복원할 때 고유 priority
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
@@ -126,12 +131,20 @@ void thread_wakeup(int64_t); // 깨우는 함수
 bool thread_compare_time(const struct list_elem *a, const struct list_elem *b, void *aux);
 //void timer_interrupt(struct intr_frame *tf);
 
+bool compare_donate_priority(const struct list_elem *c, const struct list_elem *d, void *aux);
+void donate_priority (void);
 typedef void thread_func (void *aux);
 tid_t thread_create (const char *name, int priority, thread_func *, void *);
-
+void sort_ready_list(void);
 void thread_block (void);
 void thread_unblock (struct thread *);
+ 
+void remove_with_lock (struct lock *lock);
+void refresh_priority (void);
+void lock_release (struct lock *lock);
 
+bool thread_compare_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
+void max_priority (void);
 struct thread *thread_current (void);
 tid_t thread_tid (void);
 const char *thread_name (void);

@@ -84,6 +84,7 @@
 #include <stdint.h>
 
 /* List element. */
+// 연결 리스트에서 각 요소를 나타내는 구조체다. 이 구조체는 다음과 이전요소와의 연결을 위한 포인터를 가지고 있다.
 struct list_elem {
 	struct list_elem *prev;     /* Previous list element. */
 	struct list_elem *next;     /* Next list element. */

@@ -64,6 +64,7 @@ list_init (struct list *list) {
 }
 
 /* Returns the beginning of LIST.  */
+// 시작부분을 반환
 struct list_elem *
 list_begin (struct list *list) {
 	ASSERT (list != NULL);
@@ -73,6 +74,8 @@ list_begin (struct list *list) {
 /* Returns the element after ELEM in its list.  If ELEM is the
    last element in its list, returns the list tail.  Results are
    undefined if ELEM is itself a list tail. */
+
+// 리스트의 마지막 요소라면 리스트의 tail을 반환한다. 
 struct list_elem *
 list_next (struct list_elem *elem) {
 	ASSERT (is_head (elem) || is_interior (elem));
@@ -415,6 +418,24 @@ list_sort (struct list *list, list_less_func *less, void *aux) {
 /* Inserts ELEM in the proper position in LIST, which must be
    sorted according to LESS given auxiliary data AUX.
    Runs in O(n) average case in the number of elements in LIST. */
+/*
+주어진 코드는 연결 리스트에 새로운 요소를 정렬된 순서로 삽입하는 함수다.
+list = 연결 리스트의 포인터
+elem = 삽입할 요소의 포인터
+less = 정렬 순서를 결정하는 비교 함수의 포인터 --> 비교함수
+aux = 추가적인 매개변수
+
+ASSERT문
+ 매크로를 확인하여 주어진 포인터들이 NULL이 아님을 검사한다. 즉 list,elem,less는 모두 유효한 포인터여야 한다.
+
+for 루프
+list_begin(list)부터 list_end(list)까지의 요소들을 반복하면서 정렬 순서를 만족하는 위치를 찾는다
+less함수를 사용하여 elem이 e보다 작은지 검사한다. 만약 작다면, 순서가 유지되도록 break문으로 루프를 종료한다.
+
+list_insert 함수호출
+list_insert(e,elem)을 호출하여 elem을 연결 리스트 list에 삽입
+list_insert함수는 주어진 위치(e) 바로전에 요소 (elem)을 삽입하는 함수
+*/
 void
 list_insert_ordered (struct list *list, struct list_elem *elem,
 		list_less_func *less, void *aux) {

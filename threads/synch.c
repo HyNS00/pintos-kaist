@@ -70,6 +70,9 @@ sema_init (struct semaphore *sema, unsigned value) {
 함수는 슬립할 수 없으므로, 인터럽트 핸들러 내에서 호출해서는 안된다.
 인터럽트가 비활성화된 상태에서 호출될 수 있지만, 슬립한 경우 다음 예약된 스레드는 인터럽트를 다시 활성화할 가능성이 있다.
 */
+// 'sema down'은 세마포어의 값을 하나 감소시키고, 세마포어의 값이 0이면 현재 실행 중인 스레드를 블록시키고 대기 리스트에 추가하는 역할을 수행한다.
+// 세마포어를 사용하여 공유 자원에 대한 동기화를 달성할 수 있께 한다.세마포어 값이 0인 경우에는 스레드를 대기 상태로 전환하고 , 다른 스레드가 세마포어를 해제하여 값이 증가하면 대기중인 슬레드가
+// 실행을 재개할 수 있다.
 void
 sema_down (struct semaphore *sema) {
 	enum intr_level old_level;
@@ -79,7 +82,9 @@ sema_down (struct semaphore *sema) {
 
 	old_level = intr_disable ();
 	while (sema->value == 0) {
-		list_push_back (&sema->waiters, &thread_current ()->elem);
+		list_insert_ordered(&sema ->waiters,&thread_current() ->elem,thread_compare_priority,0);
+		
+		// list_push_back (&sema->waiters, &thread_current ()->elem);
 		thread_block ();
 	}
 	sema->value--;
@@ -122,6 +127,7 @@ sema_try_down (struct semaphore *sema) {
 /*
 세마포어에 대한 UP/V연산이다. SEMA의 값을 증가시키고, SEMA를 기다리는 스레드 중 하나를 깨운다(있을 경우)
 */
+// 세마포어의 값을 증가시키고, 대기 중인 스레드 중 하나를 깨운다.
 void
 sema_up (struct semaphore *sema) {
 	enum intr_level old_level;
@@ -129,10 +135,16 @@ sema_up (struct semaphore *sema) {
 	ASSERT (sema != NULL);
 
 	old_level = intr_disable ();
-	if (!list_empty (&sema->waiters))
+	if (!list_empty (&sema->waiters)) {
+		// waiters 내부에서 우선순위 순으로 정렬
+		list_sort(&sema->waiters,thread_compare_priority,0);
 		thread_unblock (list_entry (list_pop_front (&sema->waiters),
 					struct thread, elem));
+		// 앞에서부터 unblock
+	}
 	sema->value++;
+	// ready_list로 보냈으니 ready_list의 첫 번째 스레드와 현재 cpu를 차지하고 있는 스레드를 비교하는 함수
+	max_priority();
 	intr_set_level (old_level);
 }
 
@@ -227,11 +239,19 @@ LOCK을 획득하며, 필요한 경우 사용 가능할 때까지 슬립한다.
 */
 void
 lock_acquire (struct lock *lock) {
-	ASSERT (lock != NULL);
-	ASSERT (!intr_context ());
-	ASSERT (!lock_held_by_current_thread (lock));
+	ASSERT (lock != NULL); //lock이 NULL이 아닌지 검사
+	ASSERT (!intr_context ()); // 현재 코드가 인터럽트 컨텍스트에서 실행되지 않아야함을 검사한다. 인터럽트 컨텍스트에서는 일부 동작이 제한되거나 다르게 동작할 수 있기 때문
+	ASSERT (!lock_held_by_current_thread (lock)); //현재 스레드가 lock을 이미 소유하고 있지 않아야함을 검사한다.
+	struct thread *cur = thread_current();
+	if(lock ->holder){
+		cur->wait_on_lock = lock;
+		list_insert_ordered(&lock->holder->donations, &cur->donation_element, compare_donate_priority,0);
+		donate_priority();
+	}
+	// lock을 얻기 전에 lock을 가지고 있는 스레드에게 priority를 양도해야한다.
 
 	sema_down (&lock->semaphore);
+	cur -> wait_on_lock = NULL;
 	lock->holder = thread_current ();
 }
 
@@ -267,10 +287,19 @@ lock_try_acquire (struct lock *lock) {
 현재 스레드가 소유한 LOCK을 해제한다. 이것은 lock_release함수다.
 인터럽트 핸들러는 잠금을 획득할 수 없으므로, 인터럽트 핸들러 내에서 잠금을 해제하려는 것은 의미가 없다.
 */
+
+/*
+5/31 priority를 양도받아 lock을 반환할 때의 경우를 만들어줘야한다.
+지금은 그냥 lock을 해제하고 sema up을 해주는 것이 전부
+
+*/
 void
 lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
+
+	remove_with_lock(lock);
+	refresh_priority();
 
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);
@@ -338,20 +367,24 @@ COND가 신호를 받은 후에는 반환하기 전에 LOCK을 다시 획득한�
 
 특정 조건 변수는 단 하나의 잠금과 연관되지만, 하나의 잠금은 여러 조건 변수와 연관될 수 있다.
 즉 잠금에서 조건 변수로의 일대다 매핑이 있다.*/
+// 이 함수는 스레드를 조건 변수를 사용하여 스레드를 대기 상태로 전환하는 cond_wait함수의 구현이다.
 void
 cond_wait (struct condition *cond, struct lock *lock) {
 	struct semaphore_elem waiter;
 
-	ASSERT (cond != NULL);
+
+
+
+	ASSERT (cond != NULL); // 호출조건의 유효성을 검사
 	ASSERT (lock != NULL);
 	ASSERT (!intr_context ());
 	ASSERT (lock_held_by_current_thread (lock));
 
-	sema_init (&waiter.semaphore, 0);
-	list_push_back (&cond->waiters, &waiter.elem);
-	lock_release (lock);
-	sema_down (&waiter.semaphore);
-	lock_acquire (lock);
+	sema_init (&waiter.semaphore, 0); //waiter 변수에 세마포어를 초기화한다. 이 세마포어는 대기 상태를 나타내며 ,초기값으로 0을 설정
+	list_push_back (&cond->waiters, &waiter.elem); // waiter를 조건 변수의 대기 리스트에 추가한다. 현재 스레드가 조건 변수를 기다리도록 한다.
+	lock_release (lock); // 현재 스레드가 조건 변수를 기다리게 한다.
+	sema_down (&waiter.semaphore); // 세마포어를 내린다. 스레드가 대기 상태로가고, 세마포어 값이 0인 경우 블록
+	lock_acquire (lock); // 다시 락을 획득 
 }
 
 /* If any threads are waiting on COND (protected by LOCK), then
