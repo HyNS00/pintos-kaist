@@ -1,6 +1,6 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
-
+#include "synch.h"
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
@@ -97,10 +97,22 @@ struct thread {
 	struct list_elem donation_element; // list donation에 넣어줄 리스트 성분
 	struct lock *wait_on_lock; // 해당 스레드가 대기하고 있는 lock자료구조 주소 저장:thread가 원하는 lock을 이미 다른 thread가 점유하고 있으면 lock의 주소를 저장
 	int init_priority; // priority를 양도받았다가 다시 반납할 때 원래 복원할 때 고유 priority
-
+	int exit_status;
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
-
+	struct file **fd_table;
+	int fd_idx;
+	struct intr_frame parent_if;
+	// for system call
+	#define FDT_PAGES 3 // 파일 디스크립터 테이블에 할당할 페이지의 양을 말하는 것
+	// 어람나 많은 페이지를 할당해야하는지를 다루고 있다.
+	#define FDCOUNT_LIMIT FDT_PAGES*(1<<9) // limit fdldx
+	struct semaphore fork_sema;
+	struct semaphore wait_sema;
+	struct list_elem child_elem;
+	struct list child_list;
+	struct semaphore free_sema;
+	
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
@@ -112,6 +124,7 @@ struct thread {
 
 	/* Owned by thread.c. */
 	struct intr_frame tf;               /* Information for switching */
+	struct intr_frame ptf;
 	unsigned magic;                     /* Detects stack overflow. */
 };
 

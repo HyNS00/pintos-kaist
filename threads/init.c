@@ -64,7 +64,7 @@ static void print_stats (void);
 
 int main (void) NO_RETURN;
 
-/* Pintos main program. */
+/* Pintos main program. */ // pintos의 메인 프로그램
 int
 main (void) {
 	uint64_t mem_end;
@@ -94,9 +94,9 @@ main (void) {
 
 	/* Initialize interrupt handlers. */
 	intr_init ();
-	timer_init ();
-	kbd_init ();
-	input_init ();
+	timer_init (); // 타이머 디바이스 초기화
+	kbd_init (); 	// 키보드 디바이스 초기화
+	input_init ();	// 입력 시스템 초기화
 #ifdef USERPROG
 	exception_init ();
 	syscall_init ();
@@ -118,7 +118,7 @@ main (void) {
 
 	printf ("Boot complete.\n");
 
-	/* Run actions specified on kernel command line. */
+	/* 커널 명령줄에 지정된 작업을 실행한다. */
 	run_actions (argv);
 
 	/* Finish up. */
@@ -130,12 +130,13 @@ main (void) {
 /* Clear BSS */
 static void
 bss_init (void) {
-	/* The "BSS" is a segment that should be initialized to zeros.
-	   It isn't actually stored on disk or zeroed by the kernel
-	   loader, so we have to zero it ourselves.
+	/*
+	BSS는 초기화되어야 하는 영역으로 실제로 디스크에 저장되지 않고 커널 로더에 의해 제로로 초기화되지 않는다.
+	따라서 우리는 직접 이 영역을 제로로 초기화해야한다.
 
-	   The start and end of the BSS segment is recorded by the
-	   linker as _start_bss and _end_bss.  See kernel.lds. */
+	BSS세그먼트의 시작과 끝은 링커에 의해 '_start_bss', '_end_bss'로 기록된다.
+	'kerenl.lds'파일 참조
+	*/
 	extern char _start_bss, _end_bss;
 	memset (&_start_bss, 0, &_end_bss - &_start_bss);
 }
@@ -254,6 +255,7 @@ run_task (char **argv) {
 
 /* Executes all of the actions specified in ARGV[]
    up to the null pointer sentinel. */
+/*ARGV[]에 지정된 모든 작업을 수행한다. null 포인터 센티널까지 수행*/
 static void
 run_actions (char **argv) {
 	/* An action. */

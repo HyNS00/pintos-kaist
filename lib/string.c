@@ -218,7 +218,9 @@ outputs:
 char *
 strtok_r (char *s, const char *delimiters, char **save_ptr) {
 	char *token;
-
+/*str:분리할 대상이 되는 문자열, 첫 번째 호출시에만 이 인자를 전달하고, 이후 호출에는 NULL을 전달*/
+/* **save_ptr : 분리된 토큰 다음에 남은 문자열의 위치를 가리키기 위한 포인터 첫 번째 호출 시에는 분리할 문자
+열의 주소를 전달하고 , 이후 호출에선 이전 호출에서 설정된 save_ptr사용*/
 	ASSERT (delimiters != NULL);
 	ASSERT (save_ptr != NULL);
 

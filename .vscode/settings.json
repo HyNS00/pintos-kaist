@@ -4,6 +4,9 @@
         "synch.h": "c",
         "interrupt.h": "c",
         "inttypes.h": "c",
-        "timer.h": "c"
+        "timer.h": "c",
+        "flags.h": "c",
+        "thread.h": "c",
+        "*.inc": "c"
     }
 }

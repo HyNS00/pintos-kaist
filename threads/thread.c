@@ -312,6 +312,19 @@ thread_create (const char *name, int priority,
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
 
+	// 	struct semaphore fork_sema;
+	// struct semaphore wait_sema;
+	// struct list_elem child_elem;
+	// struct list child_list;
+	// struct semaphore free_sema;
+
+	sema_init (&t->free_sema, 0);
+	sema_init (&t->wait_sema, 0);
+	sema_init (&t->fork_sema, 0);
+
+	list_push_back (&thread_current ()->child_list, &t->child_elem);
+
+
 	/* Add to run queue. */
 	thread_unblock (t);
 	max_priority();
@@ -670,6 +683,9 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->wait_on_lock = NULL;
 	list_init(&t->donations);
 	t->init_priority = priority;
+
+
+	list_init (&t->child_list);
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should

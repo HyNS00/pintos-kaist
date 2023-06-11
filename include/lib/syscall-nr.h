@@ -4,7 +4,7 @@
 /* System call numbers. */
 enum {
 	/* Projects 2 and later. */
-	SYS_HALT,                   /* Halt the operating system. */
+	SYS_HALT,                   /* Halt the operating system. */ //운영체제를 정지하는 것
 	SYS_EXIT,                   /* Terminate this process. */
 	SYS_FORK,                   /* Clone current process. */
 	SYS_EXEC,                   /* Switch current process. */
