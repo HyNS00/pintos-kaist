@@ -7,6 +7,8 @@
         "timer.h": "c",
         "flags.h": "c",
         "thread.h": "c",
-        "*.inc": "c"
+        "*.inc": "c",
+        "file.h": "c",
+        "process.h": "c"
     }
 }
